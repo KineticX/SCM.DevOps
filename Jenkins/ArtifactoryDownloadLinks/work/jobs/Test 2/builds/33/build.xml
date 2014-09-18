@@ -1,0 +1,28 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<build>
+  <actions>
+    <hudson.model.CauseAction>
+      <causes>
+        <hudson.model.Cause_-UserIdCause/>
+      </causes>
+    </hudson.model.CauseAction>
+    <artifactBuildinfo.BuildResultInfo plugin="artifactBuildinfo@1.0">
+      <url>&lt;a href=&apos;http://artifacts.lifesize.com/artifactory/uvc.softmcu.mp.production/uvc.softmcu.mp.production.trunk-1.8.5.1330.tar.gz&apos; alt=&apos;http://artifacts.lifesize.com/artifactory/uvc.softmcu.mp.production/uvc.softmcu.mp.production.trunk-1.8.5.1330.tar.gz&apos;&gt;Package #1&lt;/a&gt;&lt;br /&gt;&lt;a href=&apos;http://artifacts.lifesize.com/artifactory/uvc.softmcu.mp.production/uvc.softmcu.mp.production.trunk-1.8.5.1330.tar.gz&apos; alt=&apos;http://artifacts.lifesize.com/artifactory/uvc.softmcu.mp.production/uvc.softmcu.mp.production.trunk-1.8.5.1330.tar.gz&apos;&gt;Package #2&lt;/a&gt;&lt;br /&gt;</url>
+      <ArtifactList>
+        <string>http://artifacts.lifesize.com/artifactory/uvc.softmcu.mp.production/uvc.softmcu.mp.production.trunk-1.8.5.1330.tar.gz</string>
+        <string>http://artifacts.lifesize.com/artifactory/uvc.softmcu.mp.production/uvc.softmcu.mp.production.trunk-1.8.5.1330.tar.gz</string>
+      </ArtifactList>
+    </artifactBuildinfo.BuildResultInfo>
+  </actions>
+  <number>33</number>
+  <startTime>1405108831434</startTime>
+  <result>SUCCESS</result>
+  <duration>101</duration>
+  <charset>UTF-8</charset>
+  <keepLog>false</keepLog>
+  <builtOn></builtOn>
+  <workspace>/Users/admin/Desktop/SVN/jenkins-plugins/artifact-buildinfo/work/jobs/Test 2/workspace</workspace>
+  <hudsonVersion>1.568</hudsonVersion>
+  <scm class="hudson.scm.NullChangeLogParser"/>
+  <culprits class="com.google.common.collect.EmptyImmutableSortedSet"/>
+</build>

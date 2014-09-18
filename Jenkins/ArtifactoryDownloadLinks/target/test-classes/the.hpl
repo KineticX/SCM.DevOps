@@ -1,0 +1,14 @@
+Manifest-Version: 1.0
+Group-Id: org.artifactBuildinfo
+Short-Name: artifactBuildinfo
+Long-Name: Artifactory Download Links
+Url: http://jenkins-ci.org/plugin/artifactBuildinfo/
+Plugin-Version: 1.0.1
+Hudson-Version: 1.568
+Jenkins-Version: 1.568
+Plugin-Developers: 
+Libraries: /Users/admin/Desktop/SVN/jenkins-plugins/artifact-buildinfo
+ /target/classes
+Resource-Path: /Users/admin/Desktop/SVN/jenkins-plugins/artifact-build
+ info/src/main/webapp
+

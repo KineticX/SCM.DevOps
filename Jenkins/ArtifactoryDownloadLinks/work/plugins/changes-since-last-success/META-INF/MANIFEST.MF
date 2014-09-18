@@ -1,0 +1,19 @@
+Manifest-Version: 1.0
+Archiver-Version: Plexus Archiver
+Created-By: Apache Maven
+Built-By: nicolas
+Build-Jdk: 1.6.0_31
+Extension-Name: changes-since-last-success
+Specification-Title: generate changelog for a range of builds
+Implementation-Title: changes-since-last-success
+Implementation-Version: 0.5
+Group-Id: org.jenkins-ci.plugins
+Short-Name: changes-since-last-success
+Long-Name: Changes since last successfull build Plugin
+Url: http://wiki.jenkins-ci.org/display/JENKINS/Changes+Since+Last+Suc
+ cess+Plugin
+Plugin-Version: 0.5
+Hudson-Version: 1.424
+Jenkins-Version: 1.424
+Plugin-Developers: Nicolas De Loof:ndeloof:
+

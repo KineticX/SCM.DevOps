@@ -1,0 +1,6 @@
+Started by user [8mha:AAAAlh+LCAAAAAAAAP9b85aBtbiIQTGjNKU4P08vOT+vOD8nVc83PyU1x6OyILUoJzMv2y+/JJUBAhiZGBgqihhk0NSjKDWzXb3RdlLBUSYGJk8GtpzUvPSSDB8G5tKinBIGIZ+sxLJE/ZzEvHT94JKizLx0a6BxUmjGOUNodHsLgAzOEgYu/dLi1CL9vNKcHACFIKlWvwAAAA==[0manonymous
+Building in workspace /Users/admin/Desktop/SVN/jenkins-plugins/artifact-buildinfo/work/jobs/Test 2/workspace
+[workspace] $ /bin/sh -xe /var/folders/8g/bdjtvf0x5zs8bg8p6cz9c6wh0000gp/T/hudson4245382176080765358.sh
++ echo 'Deploying artifact: http://artifacts.lifesize.com/artifactory/uvc.softmcu.mp.production/uvc.softmcu.mp.production.trunk-1.8.5.1330.tar.gz'
+Deploying artifact: http://artifacts.lifesize.com/artifactory/uvc.softmcu.mp.production/uvc.softmcu.mp.production.trunk-1.8.5.1330.tar.gz
+Finished: SUCCESS

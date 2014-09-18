@@ -1,0 +1,32 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<project>
+  <actions/>
+  <description></description>
+  <keepDependencies>false</keepDependencies>
+  <properties/>
+  <scm class="hudson.scm.NullSCM"/>
+  <canRoam>true</canRoam>
+  <disabled>false</disabled>
+  <blockBuildWhenDownstreamBuilding>false</blockBuildWhenDownstreamBuilding>
+  <blockBuildWhenUpstreamBuilding>false</blockBuildWhenUpstreamBuilding>
+  <triggers class="vector"/>
+  <concurrentBuild>false</concurrentBuild>
+  <builders>
+    <myPlugin.MyPlugin>
+      <name>Type the job url to call</name>
+      <isSelected>false</isSelected>
+      <testlist>
+        <myPlugin.Checkbox>
+          <name>Test1</name>
+          <selected>true</selected>
+        </myPlugin.Checkbox>
+        <myPlugin.Checkbox>
+          <name>Test2</name>
+          <selected>false</selected>
+        </myPlugin.Checkbox>
+      </testlist>
+    </myPlugin.MyPlugin>
+  </builders>
+  <publishers/>
+  <buildWrappers/>
+</project>

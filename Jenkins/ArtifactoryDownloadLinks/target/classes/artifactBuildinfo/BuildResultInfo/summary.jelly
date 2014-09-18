@@ -1,0 +1,8 @@
+<j:jelly xmlns:j="jelly:core"
+         xmlns:t="/lib/hudson">
+    <t:summary icon="${it.iconFileName}">
+        <br />
+        Artifacts:
+       <blockquote>${it.urlName}</blockquote>
+    </t:summary>
+</j:jelly>

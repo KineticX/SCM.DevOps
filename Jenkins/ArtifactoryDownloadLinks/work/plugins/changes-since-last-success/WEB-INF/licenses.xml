@@ -1,0 +1,2 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<l:dependencies xmlns:l='licenses' groupId='org.jenkins-ci.plugins' artifactId='changes-since-last-success' version='0.5'><l:dependency name='Changes since last successfull build Plugin' groupId='org.jenkins-ci.plugins' artifactId='changes-since-last-success' version='0.5' url='http://wiki.jenkins-ci.org/display/JENKINS/Changes+Since+Last+Success+Plugin'><l:description>generate changelog for a range of builds</l:description><l:license name='LGPL' url=''/></l:dependency></l:dependencies>
