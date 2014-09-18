@@ -1,0 +1,136 @@
+# -------------------------------------------------------------
+#    _____                ._____.   .__          
+#   /  _  \   ____   _____|__\_ |__ |  |   ____  
+#  /  /_\  \ /    \ /  ___/  || __ \|  | _/ __ \ 
+# /    |    \   |  \\___ \|  || \_\ \  |_\  ___/ 
+# \____|__  /___|  /____  >__||___  /____/\___  >
+#         \/     \/     \/        \/          \/ 
+#
+#                              Automating the Path to Divinity
+#
+# PlayBook Description: 
+#  This playbook configures the base OS (Ubuntu)
+#  It sets the root password, creates a remote user 
+#  Installs Java and mounts a software tools folder
+# -------------------------------------------------------------
+---
+- hosts: all
+  vars:
+    - root_password: '$1$SomeSalt$qic18i2xDKj1w7CZu2gzN/'
+    - remote_password: '$1$SomeSalt$qic18i2xDKj1w7CZu2gzN/'
+ 
+  tasks:
+
+  - name: Change root password
+    user:
+      name=root
+      password={{ root_password }}
+
+  - name: Change dbuilder password
+    user:
+      name=dbuilder
+      password={{ root_password }}
+      generate_ssh_key=yes
+
+  - name: Add user dbuilder to sudoers as passwordless
+    lineinfile:
+      "dest=/etc/sudoers
+      regexp='^tracker ALL'
+      line='dbuilder ALL=(ALL) NOPASSWD: ALL'
+      state=present"
+
+  - name: Prepare dbuilder SSH directory 0700
+    action: file dest=/home/dbuilder/.ssh state=directory mode=0700
+
+  - name: Prepare root SSH directory 0700
+    action: file dest=/root/.ssh state=directory mode=0700
+
+  - name: install nfs client
+    action: apt pkg=nfs-common state=present
+    tags:
+      -nfs
+
+  - name: install Subversion client
+    action: apt pkg=subversion state=present
+    tags:
+      -subversion
+
+  - name: install GIT client
+    action: apt pkg=git state=present
+    tags:
+      -git
+
+  - name: install Rubydev packages
+    action: apt pkg=ruby-dev state=present
+    tags:
+      -ruby-dev
+
+  - name: install RubyGems packages
+    action: apt pkg=rubygems state=present
+    tags:
+      -rubygems
+
+  - name: install MailUtils packages
+    action: apt pkg=mailutils state=present
+    tags:
+      -mailutils
+
+  - name: Ruby JSON gem is installed
+    action: gem name=json state=present
+
+  - name: create directory 
+    action: command mkdir -p /lifesize/localscratch0/jenkins creates=/lifesize/localscratch0/jenkins
+    register: created_directory
+
+  - name: download jenkins slave.jar
+    action: command wget http://build.lifesize.com/jnlpJars/slave.jar -P /lifesize/localscratch0/jenkins/ creates=/lifesize/localscratch0/jenkins/slave.jar        
+    register: created_directory
+
+  - name: change ownership of slave.jar
+    action: file path=/lifesize/localscratch0/jenkins/slave.jar owner=dbuilder group=dbuilder
+
+  - name: change ownership of /lifesize
+    action: file path=/lifesize owner=dbuilder group=dbuilder
+
+  - name: change ownership of /lifesize/localscratch0
+    action: file path=/lifesize/localscratch0 owner=dbuilder group=dbuilder
+
+  - name: change ownership of /lifesize/localscratch0/jenkins
+    action: file path=/lifesize/localscratch0/jenkins owner=dbuilder group=dbuilder
+
+  - name: download java 1.6
+    action: command wget http://artifacts.lifesize.com/artifactory/software.tools/jdk-6u45-linux-x64.bin -P /usr/local/ creates=/usr/local/jdk-6u45-linux-x64.bin        
+    register: created_directory
+
+  - name: Chmod java 1.6 package to 0755
+    file: path=/usr/local/jdk-6u45-linux-x64.bin mode=755
+
+  - name: Install Java 1.6 package
+    action: command chdir=/usr/local sh /usr/local/jdk-6u45-linux-x64.bin creates=/usr/local/jdk1.6.0_45
+
+  - name: Create Java SymLink /usr/bin/java
+    action: command ln -s /usr/local/jdk1.6.0_45/bin/java /usr/bin/java creates=/usr/bin/java
+
+  - name: Ensure  NFS storage is mounted
+    mount: name=/lifesize/tools src=VF00.lifesize.com:/tools fstype=nfs state=mounted opts=nolock
+
+  - name: Install Jenkins Init.d script if it dosent exist
+    copy: src=/etc/init.d/jenkins dest=/etc/init.d/jenkins force=no
+
+  - name: Create empty .bash_profile file
+    action: command touch /home/dbuilder/.bash_profile
+
+  - name: change ownership of dbuilder bash_profile
+    action: file path=/home/dbuilder/.bash_profile owner=dbuilder group=dbuilder
+
+  - name: Add host item to ansible hosts
+    lineinfile:
+      "dest=/home/dbuilder/.bash_profile
+      regexp='^JAVA_HOME=/usr/local/jdk1.6.0_45/'
+      line='JAVA_HOME=/usr/local/jdk1.6.0_45/'
+      state=present"
+
+  handlers:
+  - name: restart sshd
+    service: name={{ ssh }} state=restarted
+
