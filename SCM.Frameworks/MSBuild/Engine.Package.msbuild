@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Package" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
+
+	<PropertyGroup>
+		<ProjectName>$(JOB_NAME)</ProjectName>
+		<PrimaryDriveLetter>C:</PrimaryDriveLetter>
+		<DeployableWebSite>$(WORKSPACE)\Build\WorkSpace\package.contents</DeployableWebSite>
+		<PackageDir>$(WORKSPACE)\Build\WorkSpace\package.contents\</PackageDir>
+		<PackageDirZ>$(WORKSPACE.Replace('C:','').Replace('E:',''))\Build\WorkSpace\package.contents</PackageDirZ>
+		<BuildVer Condition="'$(BuildVer)' == ''">9.9.9.9</BuildVer>	  
+	</PropertyGroup>
+	
+	<!-- External MSBUILD additions for added functionality -->
+	<Import Project="$(MSBuildExtensionsPath)\MSBuildCommunityTasks\MSBuild.Community.Tasks.Targets"/>
+	<Import Project="C:\Program Files\MSBuild\ExtensionPack\4.0\MSBuild.ExtensionPack.tasks"/> 
+
+	<UsingTask TaskName="XMLManifestGenerator" TaskFactory="CodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.v4.0.dll">       
+	<ParameterGroup>
+		<Items ParameterType="Microsoft.Build.Framework.ITaskItem[]" />
+		<XMLFileName ParameterType="System.String" Required="true" />
+	</ParameterGroup>
+	<Task>
+
+		<Using Namespace="System.IO" />
+		<Using Namespace="System.Text.RegularExpressions" />
+		<Using Namespace="System.Security.Cryptography"/>
+		<Using Namespace="Microsoft.Build.Framework" />
+		<Code Type="Fragment" Language="cs">
+			<![CDATA[
+				
+					// -- Fetch Passed  In Variables
+					string BuildVer = Items[0].GetMetadata("BuildVersion");
+					string XMLFileName = Items[0].GetMetadata("XMLFileName");
+				
+					// -- Create a writer and open the XML file
+					TextWriter xmlout = new StreamWriter(XMLFileName);
+					
+					// -- XML Headers
+					xmlout.WriteLine("<?xml version=\"1.0\" encoding=\"utf-8\"?>");
+					xmlout.WriteLine("\t<Deployment>");
+					xmlout.WriteLine("\t\t<BuildInfo>");
+					xmlout.WriteLine("\t\t\t<BuildDateTime>" + DateTime.Now.ToString() + "</BuildDateTime>");
+					xmlout.WriteLine("\t\t\t<BuildVersion>" + BuildVer + "</BuildVersion>");	
+					xmlout.WriteLine("\t\t\t<TotalNumberOfFiles>" + Items.Count().ToString() + "</TotalNumberOfFiles>");
+					xmlout.WriteLine("\t\t</BuildInfo>");
+					xmlout.WriteLine(); 
+					xmlout.WriteLine("\t\t<Manifest>");
+					
+					foreach(ITaskItem item in Items) {
+                 
+						// -- Get Relative Path
+						String WorkSpace = Environment.GetEnvironmentVariable("WORKSPACE");
+						String RelativeItem = item.ToString().Replace(WorkSpace + @"\Build\WorkSpace\package.contents/","");
+		
+						// -- Get MD5 value for each of our items
+						FileStream file = new FileStream(item.ToString(), FileMode.Open);
+						MD5 md5 = new MD5CryptoServiceProvider();
+						byte[] retVal = md5.ComputeHash(file);
+						file.Close();
+
+						StringBuilder MDHASH = new StringBuilder();
+						for (int i = 0; i < retVal.Length; i++)
+						{
+							MDHASH.Append(retVal[i].ToString("x2"));
+						}
+
+						// -- Get File Length
+						var fi = new FileInfo(item.ToString()); 
+						long size = fi.Length; 
+
+						// write a line of text to the file
+						xmlout.WriteLine("\t\t\t<Deployable Location=\"" + RelativeItem.ToString() + "\" size=\"" + size.ToString() + "\" md5=\"" + MDHASH.ToString() + "\">");
+						Log.LogMessage(MessageImportance.Normal, "Deployable Identified: "+RelativeItem);
+							
+
+					}
+
+					// -- Close the streamwriter\
+					xmlout.WriteLine("\t\t</Manifest>");
+					xmlout.WriteLine("\t</Deployment>");
+					xmlout.Close();
+					
+				]]>
+
+            </Code>
+        </Task>
+    </UsingTask>
+
+	<!-- TARGET: Package -->
+	<!-- PURPOSE: Generates FULL deployment WebDeploy Package AND Batch File -->
+	<Target Name="Package">
+						
+			<!-- Generate Diff Deploy Package --> 
+			<Message Text="[Creating final artifact package] : $(MSBuildToolsPath)"/>
+			
+			<!-- Generate Manifest files for package.contents directory contents -->
+			<CallTarget Targets="GenerateManifest"/>
+						
+			<CreateItem Include="$(WORKSPACE)\Build\eMS.Deploy.msbuild">	
+				<Output TaskParameter="Include" ItemName="ModularScript1"/>
+			</CreateItem>
+			<CreateItem Include="$(WORKSPACE)\Build\eMS.Deploy.v2.msbuild">	
+				<Output TaskParameter="Include" ItemName="ModularScript2"/>
+			</CreateItem>
+			<CreateItem Include="$(WORKSPACE)\Build\eMS-branch.Deploy.msbuild">	
+				<Output TaskParameter="Include" ItemName="ModularScript3"/>
+			</CreateItem>
+			<CreateItem Include="$(WORKSPACE)\Build\eMS.msbuild">	
+				<Output TaskParameter="Include" ItemName="ModularScript4"/>
+			</CreateItem>			
+			
+			<MakeDir Directories="$(WORKSPACE)\Build\WorkSpace\package.contents\Scripts\" />
+			<Copy SourceFiles="@(ModularScript1)" DestinationFolder="$(WORKSPACE)\Build\WorkSpace\package.contents\Scripts\"  ContinueOnError='true'></Copy>
+			<Copy SourceFiles="@(ModularScript2)" DestinationFolder="$(WORKSPACE)\Build\WorkSpace\package.contents\Scripts\"  ContinueOnError='true'></Copy>
+			<Copy SourceFiles="@(ModularScript3)" DestinationFolder="$(WORKSPACE)\Build\WorkSpace\package.contents\Scripts\"  ContinueOnError='true'></Copy>
+			<Copy SourceFiles="@(ModularScript4)" DestinationFolder="$(WORKSPACE)\Build\WorkSpace\package.contents\Scripts\"  ContinueOnError='true'></Copy>
+
+			<!-- Get a list of all files we are going to zip into package --> 
+			<CreateItem Include="$(PackageDir)/**/*.*">
+				<Output TaskParameter="Include" ItemName="ZipAssemblies"/>
+			</CreateItem>
+			
+			<!-- Zip the package and drop in the Artifacts folder -->
+			<MSBuild.ExtensionPack.Compression.Zip TaskAction="Create" CompressFiles="@(ZipAssemblies)"
+			ZipFileName="$(WORKSPACE)\Build\Artifacts\$(ProjectName)-$(BuildVer).zip" 
+			RemoveRoot="$(PackageDirZ)"
+			/>
+						
+			<!-- Zip the package and drop in the Artifacts folder -->
+			<MSBuild.ExtensionPack.Compression.Zip TaskAction="Create" CompressFiles="@(ZipAssemblies)"
+			ZipFileName="$(WORKSPACE)\Build\Artifacts\$(ProjectName)-SNAPSHOT.zip" 
+			RemoveRoot="$(PackageDirZ)"
+			/>
+			<Message Text="OUTPUTX: $(PackageDirZ)"/>
+			
+	</Target>
+  
+	<!--  TARGET: GenerateManifest -->
+	<!-- PURPOSE: Generates an XML file containing details about the deployment -->
+	<Target Name="GenerateManifest">
+
+	
+		<!-- ##################################### -->
+		<!-- GENERATE FULL DEPLOYMENT -->
+		<!-- ##################################### -->
+	
+		<!-- Get list of full deploy files -->
+		<CreateItem Include="$(DeployableWebSite)/**/*.*" Exclude="*.obj" >
+			<Output TaskParameter="Include" ItemName="DeployableFiles"/>
+		</CreateItem>
+		
+		<!-- Compoud the DeployableFiles ARRAY with some Environment Variables needed -->
+		<ItemGroup>
+			<XMLManifestGenerator Include="@(DeployableFiles)">
+				<BuildVersion>$(BuildVer)</BuildVersion>
+				<XMLFileName>PackageManifest.xml</XMLFileName>
+			</XMLManifestGenerator>
+		</ItemGroup>
+ 		
+		<!-- Generate XML Manifest File (Calls the CDATA function above) -->
+		<XMLManifestGenerator Items="@(XMLManifestGenerator)" XMLFileName="PackageManifest.xml"/>
+		
+		<!-- Copy the XML Manifest File INTO the Package Directory -->
+      	<Copy
+            SourceFiles="PackageManifest.xml"
+            DestinationFolder="$(DeployableWebSite)"
+        />
+		
+	</Target>	
+
+</Project>

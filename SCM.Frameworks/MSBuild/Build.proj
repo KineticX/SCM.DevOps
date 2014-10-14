@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets = "MAIN" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.5">
+
+	<!-- ENVIRONMENT VARIABLES -->
+	<PropertyGroup>
+		<ProjectName>$(JOB_NAME)</ProjectName>
+		<BuildEngineVersion>1.0.0.5</BuildEngineVersion>
+		<COMPONENTS>$(COMPONENTS)</COMPONENTS>
+	</PropertyGroup>
+	
+	<!-- Adds additional MSBuild Functionality -->
+	<Import Project="$(MSBuildExtensionsPath)\MSBuildCommunityTasks\MSBuild.Community.Tasks.Targets"/>
+	
+	<!--  TARGET: BuildAll -->
+	<!-- PURPOSE: Initiates the Build System and calls child targets  -->	
+    <Target Name="MAIN">
+		
+		<Message Text="-----------------------------------------------------------------------------------------------------"/>
+		<Message Text="Initialize Build.Core"/>
+		<Message Text="-----------------------------------------------------------------------------------------------------"/>
+		<Message Text="Build.Core Version: $(BuildEngineVersion)"/>
+		<Message Text="Target Task: $(ProjectName)"/>
+		<Message Text="Target Version: $(BuildVer)"/>
+		<Message Text="-----------------------------------------------------------------------------------------------------"/>
+	
+		<!-- Call Child Targets (Methods) -->
+		<CallTarget Targets="Clean"/>
+		<CallTarget Targets="Version"/>
+		<CallTarget Targets="Build"/>
+		<CallTarget Targets="BuildTests"/>
+		<CallTarget Targets="Package"/>
+	
+		<!-- Finish build / Continuous integration Process -->
+		<Message Text="Completed calling targets. Preparing to archive artifacts"/>
+		
+	</Target>
+	
+	<!--  TARGET: Clean -->
+	<!-- PURPOSE: Performs a clean up of the build binaries from previous builds  -->
+	<Target Name="Clean">
+	
+		<Message Text="------------------------------------------------------"/>
+		<Message Text="BUILD.CORE: Clean build artifacts from source tree"/>		
+		<Message Text="------------------------------------------------------"/>
+		
+		<MSBuild Projects = "$(WORKSPACE)\Build\Engine.CleanBuild.msbuild" Targets="Clean" />	
+				
+	</Target>
+	
+	<!--  TARGET: Version -->
+	<!-- PURPOSE: Applies the Version number information to the projects  -->
+	<Target Name="Version">
+
+		<Message Text="------------------------------------------------------"/>
+		<Message Text="BUILD.CORE: Version Scheme " />
+		<Message Text="------------------------------------------------------"/>
+		<MSBuild Projects="Engine.Version.msbuild" Properties="BuildVer=$(BuildVer)" />
+
+	</Target>
+	
+	<!-- PURPOSE: Calls the current project's msbuild file for core compilation  -->
+	<Target Name="Build">
+
+		<Message Text="------------------------------------------------------"/>
+		<Message Text="BUILD.CORE: Compile Projects and Solutions" />		
+		<Message Text="------------------------------------------------------"/>
+		
+		<!-- V2 -->
+		<MSBuild Projects="$(WORKSPACE)\Build\automation.msbuild" Targets="Compile" Condition="Exists('$(WORKSPACE)\Build\automation.msbuild')"/>
+		<Message Text="Completed Build Engine!"/>
+
+	</Target>
+	
+	<!-- TARGET: BuildTests -->
+	<!-- Build The latest set of Tests -->
+	<Target Name="BuildTests">
+
+		<Message Text="------------------------------------------------------"/>
+		<Message Text="BUILD.CORE: Build Tests (Smoke, Functional, Unit)" />		
+		<Message Text="------------------------------------------------------"/>
+	
+		<!-- Compile Our Test Sets -->	
+		<Message Text="[Building Smoke Tests]"/>
+		<MSBuild Projects = "$(WORKSPACE)\Build\Engine.TestHarness.msbuild" Targets="TestBuild" Properties="TestType=Smoke" />	
+		<Message Text="[Building QA Tests]"/>
+		<MSBuild Projects = "$(WORKSPACE)\Build\Engine.TestHarness.msbuild" Targets="TestBuild" Properties="TestType=QA" />
+		<Message Text="[Building Functional Tests]"/>		
+		<MSBuild Projects = "$(WORKSPACE)\Build\Engine.TestHarness.msbuild" Targets="TestBuild" Properties="TestType=Functional" />			
+		<Message Text="[Building Unit Tests]"/>		
+		<MSBuild Projects = "$(WORKSPACE)\Build\Engine.TestHarness.msbuild" Targets="TestBuild" Properties="TestType=Unit" />			
+		
+	</Target>
+	
+	<!-- TARGET: ExecuteUnitTests -->
+	<!-- Execute Unit Tests -->
+	<Target Name="ExecuteUnitTests">
+	
+		<Message Text="------------------------------------------------------"/>
+		<Message Text="BUILD.CORE: Execute Tests (Unit)" />		
+		<Message Text="------------------------------------------------------"/>
+		
+		<!--MSBuild Projects = "$(WORKSPACE)\Build\Engine.TestHarness.msbuild" Targets="ExecuteUnitTests" /-->			
+		
+	</Target>
+	
+		
+	<!--  TARGET: Package Binaries -->
+	<!-- PURPOSE: Creates the packages for the binaries -->
+	<Target Name="Package">
+		<Message Text="------------------------------------------------------"/>
+		<Message Text="BUILD.CORE: Creating Final Artifactory Package" />		
+		<Message Text="------------------------------------------------------"/>
+
+		<!-- V2 -->
+		<MSBuild Projects="$(WORKSPACE)\Build\automation.msbuild" Targets="PreparePackage" Condition="Exists('$(WORKSPACE)\Build\automation.msbuild')"/>
+		<MSBuild Projects="$(WORKSPACE)\Build\Engine.Package.msbuild" Targets="Package" />
+
+	</Target>
+
+
+</Project>

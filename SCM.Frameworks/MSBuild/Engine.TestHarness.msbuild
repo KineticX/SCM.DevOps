@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="TestExecute" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+	<!-- PROJECT: Test Harness -->
+	<!-- PURPOSE: This MSBUILD file will locate and build ALL Visual Studio Solutions containint *$(TestSet).Tests.SLN -->
+	<!-- Get Proper Path to NUNit executables (ALL BVT's run through NUNIT) -->
+	<PropertyGroup>
+		<NUnitPath>$(registry:HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Installer\UserData\S-1-5-21-3889982803-592092982-33883@99334F2FED8DFF645AF001A46878F12B</NUnitPath>
+		<TestType>$(TestType)</TestType>
+		<VERSION Condition="'$(VERSION)' == ''">SNAPSHOT</VERSION>
+		<MACHINEID>$(COMPUTERNAME)</MACHINEID>
+		<ProjectName>$(JOB_NAME)</ProjectName>
+		<SCRATCHDIR>C:\Scratch</SCRATCHDIR>
+		<MSBuildCommunityTasksPath>$(SCRATCHDIR)\Lib\MSBuild.Community.Tasks\</MSBuildCommunityTasksPath>
+		<MSBuildExtensionsPath>$(SCRATCHDIR)\Lib\MSBuild.ExtensionPack\</MSBuildExtensionsPath>
+	</PropertyGroup>
+	
+	<!-- Adds additional MSBuild Functionality -->
+	<Import Project="$(SCRATCHDIR)\Lib\MSBuild.Community.Tasks\MSBuild.Community.Tasks.Targets"/>
+	<Import Project="$(SCRATCHDIR)\Lib\MSBuild.ExtensionPack\MSBuild.ExtensionPack.tasks"/> 
+
+	<!-- TARGET: TestBuild -->
+	<!-- PURPOSE: Compiles Test Targets -->
+	<Target Name="TestBuild">
+
+		<CreateItem Include="$(WORKSPACE)\Build\Tests\Unit.Tests/**/*.Unit.Tests.sln">
+			<Output TaskParameter="Include" ItemName="UnitTestSet"/>
+		</CreateItem>
+
+		<CreateItem Include="$(WORKSPACE)\Build\Tests\$(TestType).Tests/BlackBox/**/*.$(TestType).Tests.sln">
+			<Output TaskParameter="Include" ItemName="BlackBoxTestSet"/>
+		</CreateItem>
+	
+		<CreateItem Include="$(WORKSPACE)\Build\Tests\$(TestType).Tests/WhiteBox/**/*.$(TestType).Tests.sln">
+			<Output TaskParameter="Include" ItemName="WhiteBoxTestSet"/>
+		</CreateItem>
+		
+		<Message Text="Located: %(UnitTestSet.Identity)"/>
+		<Message Text="Located: %(BlackBoxTestSet.Identity)"/>
+		<Message Text="Located: %(WhiteBoxTestSet.Identity)"/>
+		
+		<!-- Build Test Sets-->
+		<Message Text="[Cleaning Test Sets ($(TestType))]" />
+		<MSBuild Projects = "%(UnitTestSet.Identity)" Targets="Clean"/>	
+		<MSBuild Projects = "%(BlackBoxTestSet.Identity)" Targets="Clean"/>	
+		<MSBuild Projects = "%(WhiteBoxTestSet.Identity)" Targets="Clean"/>	
+
+		<!-- Remove OBJ Folders from built Tests -->
+		<Message Text="[Cleaning OBJ Artifacts]"/>
+		<Exec command="for /d /r . %%d in (obj) do @if exist &quot;%%d&quot; rd /s/q &quot;%%d&quot;"/>
+		
+		<!-- Build Test Sets-->
+		<Message Text="[Compiling Test Sets ($(TestType))]" />		
+		<MSBuild Projects = "%(UnitTestsSet.Identity)"  Properties="Configuration=Debug"/>	
+		<MSBuild Projects = "%(BlackBoxTestSet.Identity)"  Properties="Configuration=Debug"/>	
+		<MSBuild Projects = "%(WhiteBoxTestSet.Identity)"  Properties="Configuration=Debug"/>	
+				
+		<!-- Prepare Tests for Packaging -->
+		<Message Text="[Preparing Test Binaries for Packaging]"/>
+		<CreateItem Include="$(WORKSPACE)\Build\Tests\Unit.Tests\**\bin\debug\**\*.*"> 
+			<Output TaskParameter="Include" ItemName="UnitTestsCompiledTestSet"/>
+		</CreateItem>
+
+		<Message Text="[Preparing Test Binaries for Packaging]"/>
+		<CreateItem Include="$(WORKSPACE)\Build\Tests\$(TestType).Tests\BlackBox\**\bin\debug\**\*.*"> 
+			<Output TaskParameter="Include" ItemName="BlackBoxCompiledTestSet"/>
+		</CreateItem>
+
+		<Message Text="[Preparing Test Binaries for Packaging]"/>
+		<CreateItem Include="$(WORKSPACE)\Build\Tests\$(TestType).Tests\WhiteBox\**\bin\debug\**\*.*"> 
+			<Output TaskParameter="Include" ItemName="WhiteBoxCompiledTestSet"/>
+		</CreateItem>
+				
+		<CreateItem Include="$(WORKSPACE)\Build\Tests\$(TestType).Tests\**\packages\**\lib\**\*.*"> 
+			<Output TaskParameter="Include" ItemName="TestFrameWorks"/>
+		</CreateItem>
+		
+		<!-- Make the Directory for Tests-->
+		<MakeDir Directories="$(WORKSPACE)\Build\WorkSpace\package.contents\Tests\$(TestType)Tests"/>
+		<MakeDir Directories="$(WORKSPACE)\Build\WorkSpace\package.contents\Tests\$(TestType)Tests\BlackBox"/>
+		<MakeDir Directories="$(WORKSPACE)\Build\WorkSpace\package.contents\Tests\$(TestType)Tests\WhiteBox"/>
+		<MakeDir Directories="$(WORKSPACE)\Build\WorkSpace\package.contents\Tests\$(TestType)Tests\Unit.Tests"/>
+			
+		<!-- Copy the Tests Directory -->
+      	<Copy
+            SourceFiles="%(UnitTestsCompiledTestSet.Identity)"
+            DestinationFolder="$(WORKSPACE)\Build\WorkSpace\package.contents\Tests\$(TestType)Tests\Unit.Tests"
+        />
+      	<Copy
+            SourceFiles="%(BlackBoxCompiledTestSet.Identity)"
+            DestinationFolder="$(WORKSPACE)\Build\WorkSpace\package.contents\Tests\$(TestType)Tests\BlackBox"
+        />
+      	<Copy
+            SourceFiles="%(WhiteBoxCompiledTestSet.Identity)"
+            DestinationFolder="$(WORKSPACE)\Build\WorkSpace\package.contents\Tests\$(TestType)Tests\WhiteBox"
+        />
+		
+		<!-- Copy the Tests Directory -->
+      	<Copy
+            SourceFiles="%(TestFrameWorks.Identity)"
+            DestinationFolder="$(WORKSPACE)\Build\WorkSpace\package.contents\Tests\$(TestType)Tests\BlackBox"
+        />
+      	
+		<Copy
+            SourceFiles="%(TestFrameWorks.Identity)"
+            DestinationFolder="$(WORKSPACE)\Build\WorkSpace\package.contents\Tests\$(TestType)Tests\WhiteBox"
+        />
+
+		
+		<!-- Delete uselessness from test output directory-->
+		<Exec Command="del &quot;$(WORKSPACE)\Build\WorkSpace\package.contents\Tests\$(TestType)Tests\*.csproj&quot;"/>
+		<Exec Command="del &quot;$(WORKSPACE)\Build\WorkSpace\package.contents\Tests\$(TestType)Tests\*.suo&quot;"/>
+		<Exec Command="del &quot;$(WORKSPACE)\Build\WorkSpace\package.contents\Tests\$(TestType)Tests\*.sln&quot;"/>
+		<Exec Command="del &quot;$(WORKSPACE)\Build\WorkSpace\package.contents\Tests\$(TestType)Tests\*.cs&quot;"/>
+		<Exec Command="del &quot;$(WORKSPACE)\Build\WorkSpace\package.contents\Tests\$(TestType)Tests\*.txt&quot;"/>
+		<Exec Command="del &quot;$(WORKSPACE)\Build\WorkSpace\package.contents\Tests\$(TestType)Tests\*.svn-base&quot;"/>
+		<Exec Command="del &quot;$(WORKSPACE)\Build\WorkSpace\package.contents\Tests\$(TestType)Tests\*.nupkg&quot;"/>
+		<Exec Command="del &quot;$(WORKSPACE)\Build\WorkSpace\package.contents\Tests\$(TestType)Tests\*.pdb&quot;"/>
+	
+	</Target>
+
+	
+	<!-- TARGET: ExecuteUnitTests -->
+	<!-- PURPOSE: Executes Unit Tests -->
+	<Target Name="ExecuteUnitTests">
+
+		<Message Text="------------------------------------------------------------"/>
+		<Message Text="Executing Test Automation for Unit.Tests" />		
+		<Message Text="------------------------------------------------------------"/>
+
+		<!-- Generate a list of ALL DLL's created from the above msbuild command  -->
+		<CreateItem Include="$(WORKSPACE)\Build\Tests\Unit.Tests/**/*.Unit.Tests.sln">
+			<Output TaskParameter="Include" ItemName="UnitTestSuites"/>
+		</CreateItem>
+
+		<!-- Clean and Build Test Sets-->
+		<Message Text="[Compile Unit.Test SLN's]" />
+		<MSBuild Projects = "%(UnitTestSuites.Identity)" Targets="Clean"/>	
+		<MSBuild Projects = "%(UnitTestSuites.Identity)" Properties="Configuration=Debug"/>		
+
+		<!-- Generate a list of ALL DLL's created from the above msbuild command  -->
+		<CreateItem Include="$(WORKSPACE)\Build\Tests\Unit.Tests\**\bin\debug\**\*.Unit.Tests.dll">	
+			<Output TaskParameter="Include" ItemName="UnitTestAssemblies"/>
+		</CreateItem>
+
+		<!--Execute: Run Test Suites -->
+		<MakeDir Directories="$(WORKSPACE)\Build\WorkSpace\package.contents\Tests\UnitTests\TestResults" Condition="!Exists('$(WORKSPACE)\Build\WorkSpace\package.contents\Tests\UnitTests\TestResults')"/>
+		<Message Text="Test File Identified: %(TestAssemblies.Identity)"/>
+		<Exec IgnoreExitCode="true" command="&quot;C:\Program Files (x86)\NUnit 2.6.1\bin\nunit-console-x86.exe&quot; /framework=4.0.30319 &quot;%(UnitTestAssemblies.Identity)&quot; /xml:&quot;$(WORKSPACE)\Build\WorkSpace\package.contents\Tests\UnitTests\TestResults\TestResults.xml&quot; &quot;/timeout=240000&quot;"/>
+
+		<Message Text="Completed execution of UnitTests"/>  
+
+	</Target>
+  
+	<!-- TARGET: ExecuteTest Suites -->
+	<!-- PURPOSE: Executes Tests -->
+	<Target Name="TestExecute">
+	
+		<Message Text="------------------------------------------------------------"/>
+		<Message Text="Executing Test Automation Framework for $(TestType).Tests" />		
+		<Message Text="------------------------------------------------------------"/>
+	
+		<MakeDir Directories="$(WORKSPACE)\TestResults" />
+		<MakeDir Directories="$(SCRATCHDIR)\Package" />
+	
+		<!-- Grab the package defined in the properties -->
+		<MSBuild.ExtensionPack.FileSystem.Folder TaskAction="RemoveContent" Path="$(WORKSPACE)\TestResults\"/>
+		<MSBuild.ExtensionPack.Compression.Zip TaskAction="Extract" ExtractPath="$(SCRATCHDIR)\Package\" ZipFileName="$(SCRATCHDIR)\Package\$(ProjectName)-$(VERSION).zip"/>		
+
+		<!-- Generate a list of ALL DLL's created from the above msbuild command  -->
+		<CreateItem Include="$(SCRATCHDIR)\Package\Tests\$(TestType)Tests\BlackBox\*.$(TestType).Tests.dll">	
+			<Output TaskParameter="Include" ItemName="BlackBoxTestAssemblies"/>
+		</CreateItem>
+
+		<!-- Generate a list of ALL DLL's created from the above msbuild command  -->
+		<CreateItem Include="$(SCRATCHDIR)\Package\Tests\$(TestType)Tests\WhiteBox\*.$(TestType).Tests.dll">	
+			<Output TaskParameter="Include" ItemName="WhiteBoxTestAssemblies"/>
+		</CreateItem>
+
+		<!-- Generate a list of ALL DLL's created from the above msbuild command  -->
+		<CreateItem Include="$(SCRATCHDIR)\Package\Tests\$(TestType)Tests\*.$(TestType).Tests.dll">	
+			<Output TaskParameter="Include" ItemName="GenericTestAssemblies"/>
+		</CreateItem>
+		
+		<!-- Generate the Results Folder which will contain our result XML files -->
+		<Message Text="Generating NUnit Test Results folder structure"/>
+				
+		<!--Execute: Run our Test Sets -->
+		<Message Text="Test File Identified: %(TestAssemblies.Identity)"/>
+		<!-- Exec command="&quot;C:\Program Files\NUnit 2.6.1\bin\nunit-consolex86.exe&quot; /cleanup"/ -->
+		<Exec IgnoreExitCode="true"  command="taskkill /IM iexplore.exe /F" ContinueOnError='true'/>
+
+		<Message Text="Executing tests...."/>
+		<Exec IgnoreExitCode="true" command="&quot;C:\Program Files (x86)\NUnit 2.6.1\bin\nunit-console-x86.exe&quot; /framework=4.0.30319 &quot;%(BlackBoxTestAssemblies.Identity)&quot; /xml:&quot;$(WORKSPACE)\TestResults\%(BlackBoxTestAssemblies.FileName)-TestResults.xml&quot; &quot;/timeout=240000&quot;"/>	
+
+		<Exec Condition="$(GenericTestAssemblies) != ''" IgnoreExitCode="true" command="&quot;C:\Program Files (x86)\NUnit 2.6.1\bin\nunit-console-x86.exe&quot; /framework=4.0.30319 &quot;%(GenericTestAssemblies.Identity)&quot; /xml:&quot;$(WORKSPACE)\TestResults\TestResults.xml&quot; &quot;/timeout=240000&quot;"/>	
+	</Target>
+	
+	
+	
+
+</Project>

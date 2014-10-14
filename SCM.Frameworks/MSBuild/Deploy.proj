@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets = "Deploy" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
+
+
+	<!-- ================================  -->
+	<!-- GLOBAL VARIABLES -->
+	<!-- ================================ -->
+	<PropertyGroup>
+		<MSBuildCommunityTasksPath>.\</MSBuildCommunityTasksPath>
+		<MSBuildExtensionsPath>.\</MSBuildExtensionsPath>
+		<VERSION Condition="'$(VERSION)' == ''">1.0.0.1000</VERSION>
+		<MACHINEID>$(COMPUTERNAME)</MACHINEID>
+		<ProjectName>$(JOB_NAME)</ProjectName>
+		<ScratchDir>C:\Scratch</ScratchDir>
+		<CHILDTARGETS Condition="'$(CHILDTARGETS)' == ''">ALL</CHILDTARGETS>
+		<MD5HASH Condition="'$(MD5HASH)' == ''">OFF</MD5HASH>
+		<v2Deploy>$(v2Deploy)</v2Deploy>
+	</PropertyGroup>
+	
+
+	<!-- ================================  -->
+	<!-- IMPORTS -->
+	<!-- ================================ -->
+	<Import Project="$(SCRATCHDIR)\Lib\MSBuild.Community.Tasks\MSBuild.Community.Tasks.Targets"/>
+	<Import Project="$(SCRATCHDIR)\Lib\MSBuild.ExtensionPack\MSBuild.ExtensionPack.tasks"/> 
+
+	<!-- ================================  -->
+	<!-- FUNCATIONS -->
+	<!-- ================================ -->
+	<UsingTask TaskName="MD5Verification" TaskFactory="CodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.v4.0.dll">
+	<ParameterGroup>
+			<MD5PackagePath ParameterType="System.String" Required="true" />
+			<MD5FileContents ParameterType="System.String" Required="true" />
+			<MD5RequiredHASH ParameterType="System.String" Required="true" />
+	</ParameterGroup>       	   
+	<Task>
+
+		<Using Namespace="System.IO" />
+		<Using Namespace="System.Text.RegularExpressions" />
+		<Using Namespace="System.Security.Cryptography"/>
+		<Using Namespace="Microsoft.Build.Framework" />
+		<Code Type="Fragment" Language="cs">
+
+                <![CDATA[
+
+				
+					// -- Get MD5 value for each of our items
+					FileStream file = new FileStream(MD5PackagePath.ToString(), FileMode.Open);
+					String MD5Required = MD5RequiredHASH.ToString();
+					MD5 md5 = new MD5CryptoServiceProvider();
+					byte[] retVal = md5.ComputeHash(file);
+					file.Close();
+
+					StringBuilder MDHASH = new StringBuilder();
+					for (int i = 0; i < retVal.Length; i++)
+					{
+						MDHASH.Append(retVal[i].ToString("x2"));
+					}
+
+					Log.LogMessage(MessageImportance.Normal, "------------------------------------------------------");
+					Log.LogMessage(MessageImportance.Normal, "Step 3: Verifying MD5 CheckSums ");			
+					Log.LogMessage(MessageImportance.Normal, "------------------------------------------------------");
+					Log.LogMessage(MessageImportance.Normal, "Package Location: "+ MD5PackagePath +" \nFresh MD5: " + MD5FileContents + "\nArtifactory MD5: " + MDHASH + "\nUser Specified MD5:" + MD5Required);
+
+					int MD5Compare = String.Compare(MD5FileContents.ToString(), MDHASH.ToString());
+					int MD5REQCompare = String.Compare(MD5Required.ToString(), MDHASH.ToString());
+					if ((MD5Required != null)  && (((MD5REQCompare == 0) && (MD5Required != "OFF"))  || (MD5REQCompare != 0) && (MD5Required == "OFF")) && (MD5Compare == 0)) {
+
+						Log.LogMessage(MessageImportance.Normal, "MD5 Verified Successfully");
+					
+					} else {
+
+							Log.LogMessage(MessageImportance.High, "MD5 Verification FAILED!");
+							throw new Exception("Could not verify the MD5's the package downloaded is corrupt.");
+
+					}
+							
+					
+				    ]]>
+
+            </Code>
+        </Task>
+    </UsingTask>
+
+	
+	<!-- ================================  -->
+	<!-- PRIMARY ENTRY POINT -->
+	<!-- ================================ -->
+	<Target Name="Deploy">
+
+		<Message Text="--------------------------------------------------------------------------------------"/>
+		<Message Text="Deployment Details "                                                                          />		
+		<Message Text="--------------------------------------------------------------------------------------"/>
+		<Message Text="Environment: $(MACHINEID)"/>
+		<Message Text="ProjectName: $(ProjectName)    "/>
+		<Message Text="Version: $(VERSION)    "/>
+		<Message Text="Scratch Directory: $(ScratchDir) %0A"/>
+		<Message Text="Package: $(ScratchDir)\Package\$(ProjectName)-$(VERSION).zip"/>
+		
+		<Message Text="------------------------------------------------------"/>
+		<Message Text="Clearing Out Scratch\Package Folder"                      />		
+		<Message Text="------------------------------------------------------"/>
+		
+		<MakeDir Directories="$(SCRATCHDIR)\Package" Condition="!Exists('$(ScratchDir)\Package\$(ProjectName)-$(VERSION).zip')"/>	
+		<MSBuild.ExtensionPack.FileSystem.Folder TaskAction="RemoveContent" Path="$(ScratchDir)\Package"/>
+
+		<Message Text="------------------------------------------------------"/>
+		<Message Text="Fetching Package from Artifactory "           />		
+		<Message Text="------------------------------------------------------"/>
+
+		<Message Text="WEB DOWNLOAD: http://artifactory01.medmanagesystems.local:8081/artifactory/simple/MedManageSystems/$(ProjectName)/Build/Artifacts/$(ProjectName)-$(VERSION).zip" Condition="!Exists('$(ScratchDir)\Package\$(ProjectName)-$(VERSION).zip')"/>
+		<Message Text="WEB DOWNLOAD: http://artifactory01.medmanagesystems.local:8081/artifactory/simple/MedManageSystems/$(ProjectName)/Build/Artifacts/$(ProjectName)-$(VERSION).zip.md5" Condition="!Exists('$(ScratchDir)\Package\$(ProjectName)-$(VERSION).zip.md5')"/>
+
+		<WebDownload FileName="$(ScratchDir)\Package\$(ProjectName)-$(VERSION).zip"     FileUri="http://artifactory01.medmanagesystems.local:8081/artifactory/simple/MedManageSystems/eMS/Build/Artifacts/$(ProjectName)-$(VERSION).zip"     Condition="!Exists('$(ScratchDir)\Package\$(ProjectName)-$(VERSION).zip')" ContinueOnError='true'/>
+		<WebDownload FileName="$(ScratchDir)\Package\$(ProjectName)-$(VERSION).zip.md5" FileUri="http://artifactory01.medmanagesystems.local:8081/artifactory/simple/MedManageSystems/eMS/Build/Artifacts/$(ProjectName)-$(VERSION).zip.md5" Condition="!Exists('$(ScratchDir)\Package\$(ProjectName)-$(VERSION).zip.md5')" ContinueOnError='true'/>
+
+		<WebDownload FileName="$(ScratchDir)\Package\$(ProjectName)-$(VERSION).zip"     FileUri="http://artifactory01.medmanagesystems.local:8081/artifactory/simple/MedManageSystems/eMS-branch/Build/Artifacts/$(ProjectName)-$(VERSION).zip"     Condition="!Exists('$(ScratchDir)\Package\$(ProjectName)-$(VERSION).zip')" ContinueOnError='true'/>
+		<WebDownload FileName="$(ScratchDir)\Package\$(ProjectName)-$(VERSION).zip.md5" FileUri="http://artifactory01.medmanagesystems.local:8081/artifactory/simple/MedManageSystems/eMS-branch/Build/Artifacts/$(ProjectName)-$(VERSION).zip.md5" Condition="!Exists('$(ScratchDir)\Package\$(ProjectName)-$(VERSION).zip.md5')" ContinueOnError='true'/>
+		
+		<WebDownload FileName="$(ScratchDir)\Package\$(ProjectName)-$(VERSION).zip"     FileUri="http://artifactory01.medmanagesystems.local:8081/artifactory/simple/MedManageSystems/SampleCenters/$(ProjectName)-$(VERSION).zip"     Condition="!Exists('$(ScratchDir)\Package\$(ProjectName)-$(VERSION).zip')" ContinueOnError='true'/>
+		<WebDownload FileName="$(ScratchDir)\Package\$(ProjectName)-$(VERSION).zip.md5" FileUri="http://artifactory01.medmanagesystems.local:8081/artifactory/simple/MedManageSystems/SampleCenters/$(ProjectName)-$(VERSION).zip.md5" Condition="!Exists('$(ScratchDir)\Package\$(ProjectName)-$(VERSION).zip.md5')" ContinueOnError='true'/>
+
+		<WebDownload FileName="$(ScratchDir)\Package\$(ProjectName)-$(VERSION).zip"     FileUri="http://artifactory01.medmanagesystems.local:8081/artifactory/simple/MedManageSystems/eMS/Build/Artifacts/$(ProjectName)-branch-$(VERSION).zip"     Condition="!Exists('$(ScratchDir)\Package\$(ProjectName)-$(VERSION).zip')" ContinueOnError='true'/>
+		<WebDownload FileName="$(ScratchDir)\Package\$(ProjectName)-$(VERSION).zip.md5" FileUri="http://artifactory01.medmanagesystems.local:8081/artifactory/simple/MedManageSystems/eMS/Build/Artifacts/$(ProjectName)-branch-$(VERSION).zip.md5" Condition="!Exists('$(ScratchDir)\Package\$(ProjectName)-$(VERSION).zip.md5')" ContinueOnError='true'/>
+		
+		<!-- Create variable containing our md5 file path -->
+		<ItemGroup>
+			<File Include="$(ScratchDir)\Package\$(ProjectName)-$(VERSION).zip.md5" />
+		</ItemGroup>
+		
+		<Message Text="------------------------------------------------------"/>
+		<Message Text="Step 4: Unzipping Package "/>		
+		<Message Text="------------------------------------------------------"/>
+		<MSBuild.ExtensionPack.Compression.Zip TaskAction="Extract" ExtractPath="$(ScratchDir)\Package" ZipFileName="$(ScratchDir)\Package\$(ProjectName)-$(VERSION).zip"/>		
+		
+		<!-- Modular Deployment Scenario -->
+		<MSBuild Projects="$(ScratchDir)\Package\Scripts\eMS.Deploy.msbuild" Properties="CHILDTARGETS=ALL" Condition="Exists('$(ScratchDir)\Package\Scripts\eMS.Deploy.msbuild') AND !Exists('$(WORKSPACE)\Build\automation.msbuild')"/>
+		<MSBuild Projects="$(ScratchDir)\Package\Scripts\automation.msbuild" Targets="Deploy" Condition="Exists('$(ScratchDir)\Package\Scripts\automation.msbuild')"/>
+		<MSBuild Projects="$(ScratchDir)\Package\Scripts\automation.msbuild" Targets="Deploy" Condition="Exists('$(ScratchDir)\Package\Scripts\automation.msbuild')"/>
+
+		<!-- TODO: HANDLE AUTOMATION for 3PA build.msbuild file -->
+		<MSBuild Projects="$(ScratchDir)\Package\Scripts\deploy.msbuild" Properties="CHILDTARGETS=ALL" Condition="Exists('$(ScratchDir)\Package\Scripts\deploy.msbuild') AND !Exists('$(WORKSPACE)\Build\automation.msbuild')"/>
+
+		<Exec Command="%WINDIR%\system32\inetsrv\appcmd start site /site.name:eMS.Admin" ContinueOnError="true"/>
+		<Exec Command="%WINDIR%\system32\inetsrv\appcmd start site /site.name:eMS.ExternalServiceCircuitBreaker" ContinueOnError="true"/>
+		<Exec Command="%WINDIR%\system32\inetsrv\appcmd start site /site.name:eMS.FaxFormService" ContinueOnError="true"/>
+		<Exec Command="%WINDIR%\system32\inetsrv\appcmd start site /site.name:eMS.mSampling" ContinueOnError="true"/>
+		<Exec Command="%WINDIR%\system32\inetsrv\appcmd start site /site.name:eMS.RoutingService" ContinueOnError="true"/>
+		<Exec Command="%WINDIR%\system32\inetsrv\appcmd start site /site.name:eMS.Web" ContinueOnError="true"/>
+		<Exec Command="%WINDIR%\system32\inetsrv\appcmd start site /site.name:eMS.WS" ContinueOnError="true"/>
+		<Exec Command="%WINDIR%\system32\inetsrv\appcmd start site /site.name:eMS.maeservice" ContinueOnError="true"/>
+		<Exec Command="%WINDIR%\system32\inetsrv\appcmd start site /site.name:eMS.MerckSodsAccessService" ContinueOnError="true"/>
+		
+	</Target>
+	
+</Project>
