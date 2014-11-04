@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets = "UploadArtifact" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
+
+
+	<PropertyGroup>
+			<ScratchDir>C:\\Scratch\\</ScratchDir>
+			<Artifact>$(ARTIFACT)</Artifact>		
+	</PropertyGroup>
+
+	<!-- Adds additional MSBuild Functionality -->
+	<Import Project=".\Lib\MSBuild.Community.Tasks\MSBuild.Community.Tasks.Targets"/>
+	<Import Project=".\Lib\MSBuild.ExtensionPack\MSBuild.ExtensionPack.tasks"/> 
+	
+	<UsingTask TaskName="DeployArtifact" TaskFactory="CodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.v4.0.dll">
+
+	<ParameterGroup>
+		 <ArtifactFile ParameterType="System.String" Required="False" Output="False"/>
+		 <ArtifactoryURL ParameterType="System.String" Required="False" Output="False"/>
+         <TargetRepository ParameterType="System.String" Required="False" Output="False"/>
+    </ParameterGroup>
+    <Task>
+		
+            <Using Namespace="System.Net" />
+            <Using Namespace="System.Text" />
+            <Using Namespace="System.IO" />
+            <Using Namespace="Microsoft.Build.Framework" />
+            <Code Type="Fragment" Language="cs">
+				<![CDATA[
+
+
+						// -- Check if ArtifactoryURL is null
+						if (String.IsNullOrEmpty(ArtifactoryURL))
+						{
+								Log.LogMessage("Error: No Artifactory URL was passed in!", MessageImportance.High);
+								return false;
+
+						}
+			
+						// -- Check if Deployable Entity Exists
+						if (!File.Exists(ArtifactFile))
+						{
+								Log.LogMessage("Error: No File " + ArtifactFile + " Exists!", MessageImportance.High);
+								return false;
+						}
+
+	
+						// Get FileName from URI
+						String fileUri = new System.Uri(ArtifactFile).AbsolutePath;
+						Uri uri = new Uri(fileUri);
+						string filename = System.IO.Path.GetFileName(uri.LocalPath);
+						Log.LogMessage("FileName: " + filename, MessageImportance.High);
+						
+						byte[] buffer;
+						
+						// -- Read the file contents into memory
+						FileStream fStream = new FileStream(fileUri, FileMode.Open, FileAccess.Read);
+						try
+						{
+							int length = (int)fStream.Length;
+							buffer = new byte[length];
+							int count;
+							int sum = 0;
+
+							while ((count = fStream.Read(buffer, sum, length - sum)) > 0)
+								sum += count;
+						}
+						finally
+						{
+							fStream.Close();
+						}
+
+
+						byte[] localFile = buffer;
+
+						String sUrl = ArtifactoryURL +
+										"/MedManageSystems.Released/" +
+										"/" + filename;
+
+						WebRequest request = WebRequest.Create(sUrl);
+
+						request.ContentType = "application/zip";
+						request.Method = "PUT";
+						request.Credentials = new NetworkCredential("admin", "password");
+
+						Stream requestStream = request.GetRequestStream();
+						requestStream.Write(localFile, 0, localFile.Length);
+						requestStream.Close();
+
+						WebResponse response = request.GetResponse();
+						Console.Write("Response from Server: " + response);
+
+
+				]]>
+
+            </Code>			
+        </Task>
+    </UsingTask>
+	
+	<Target Name="UploadArtifact">
+
+		<DeployArtifact ArtifactFile="$(SCRATCHDIR)$(ARTIFACT)" ArtifactoryURL="http://10.168.11.81:8081/artifactory"  />
+		
+	</Target>
+	
+	
+
+	
+	
+</Project>

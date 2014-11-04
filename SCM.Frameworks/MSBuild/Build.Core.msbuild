@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets = "BuildCore" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
+
+
+	
+	<!-- Import Community Tasks -->
+	<Import Project="$(MSBuildExtensionsPath)\MSBuildCommunityTasks\MSBuild.Community.Tasks.Targets"/>
+	<Import Project="C:\Program Files\MSBuild\ExtensionPack\4.0\MSBuild.ExtensionPack.tasks"/> 
+
+	
+	<Target Name="BuildCore">
+	
+		<!-- Clean Package.Contens Folder -->	
+		<RemoveDir Directories="$(WORKSPACE)\Package.Contents"/> 
+		<MakeDir Directories="$(WORKSPACE)\Package.Contents"/> 
+
+		<!-- Clean Package Folder -->	
+		<RemoveDir Directories="$(WORKSPACE)\Package"/> 
+		<MakeDir Directories="$(WORKSPACE)\Package"/> 
+			
+		<!-- -Generate a list of ALL Build Scripts  -->
+		<CreateItem Include="$(WORKSPACE)\**/*.*" Exclude="$(WORKSPACE)\**\.svn\**\*.*;$(WORKSPACE)\**\*.pdb" >	
+			<Output TaskParameter="Include" ItemName="BuildEngine"/>
+		</CreateItem>
+		
+		<Copy SourceFiles="@(BuildEngine)" DestinationFolder="$(WORKSPACE)\Package.Contents\%(RecursiveDir)"></Copy>
+		
+		<!-- Increment the Build.Core Version Number -->
+		<XmlUpdate Prefix="n"
+			Namespace="http://schemas.microsoft.com/developer/msbuild/2003"
+			XmlFileName="$(WORKSPACE)\Package.Contents\Build.proj"
+			XPath="/n:Project/n:PropertyGroup/n:BuildEngineVersion"
+			Value="$(BuildVer)" />
+		
+		<!-- Get a list of all files we are going to zip into package --> 
+		<CreateItem Include="$(WORKSPACE)/Package.Contents/**/*.*">
+			<Output TaskParameter="Include" ItemName="ZipAssemblies"/>
+		</CreateItem>
+					
+		<!-- Zip the package and drop in the deploy folder -->
+		<MSBuild.ExtensionPack.Compression.Zip TaskAction="Create" CompressFiles="@(ZipAssemblies)"
+			ZipFileName="$(WORKSPACE)\Package\Build.Core-SNAPSHOT.zip" 
+			RemoveRoot="\workspace\Build.Core Automation Engine\Package.Contents"
+		/>
+		<!-- Zip the package and drop in the deploy folder -->
+		<MSBuild.ExtensionPack.Compression.Zip TaskAction="Create" CompressFiles="@(ZipAssemblies)"
+			ZipFileName="$(WORKSPACE)\Package\Build.Core-$(BuildVer).zip" 
+			RemoveRoot="\workspace\Build.Core Automation Engine\Package.Contents"
+		/>
+
+		
+	</Target>
+
+</Project>

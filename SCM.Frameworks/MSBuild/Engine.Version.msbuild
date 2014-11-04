@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="ApplyVersioning" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  
+	<!-- Adds additional MSBuild Functionality -->
+	<Import Project="$(SCRATCHDIR)\Lib\MSBuild.Community.Tasks\MSBuild.Community.Tasks.Targets"/>
+	<Import Project="$(SCRATCHDIR)\Lib\MSBuild.ExtensionPack\MSBuild.ExtensionPack.tasks"/> 
+
+	<!-- Environment Variables-->
+	<PropertyGroup>
+		<PrimaryDriveLetter>C:</PrimaryDriveLetter>
+		<ProjectName>$(JOB_NAME)</ProjectName>
+		<BuildVer Condition="'$(BuildVer)' == ''">9.9.9.9</BuildVer>
+	</PropertyGroup>
+  
+	<!-- Locate All AssemblyInfo.* files -->
+	<ItemGroup>
+		<AssemblyInfoCSFiles Include="$(WORKSPACE)\**\**\AssemblyInfo.cs" />
+		<AssemblyInfoVBFiles Include="$(WORKSPACE)\**\**\AssemblyInfo.vb" />
+	</ItemGroup>
+   
+	<UsingTask TaskName="RegexTransform" TaskFactory="CodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.v4.0.dll">
+        <ParameterGroup>
+            <Items ParameterType="Microsoft.Build.Framework.ITaskItem[]" />
+        </ParameterGroup>
+        
+        <Task>
+
+            <Using Namespace="System.IO" />
+            <Using Namespace="System.Text.RegularExpressions" />
+            <Using Namespace="Microsoft.Build.Framework" />
+            <Code Type="Fragment" Language="cs">
+
+                <![CDATA[
+
+                    foreach(ITaskItem item in Items) 
+					{
+
+						string fileName = item.GetMetadata("FullPath");
+						string find = item.GetMetadata("Find");
+						string replaceWith = item.GetMetadata("ReplaceWith");
+						
+						Log.LogMessage(MessageImportance.Normal, "Applying version: "+fileName);
+						
+						if(!File.Exists(fileName)) {
+						
+							Log.LogError(null, null, null, null, 0, 0, 0, 0, String.Format("Could not find version file: {0}", fileName), new object[0]);
+						
+						} else {
+
+						string content = File.ReadAllText(fileName);
+						File.WriteAllText(
+						
+							fileName,
+							Regex.Replace(
+								content,
+								find,
+								replaceWith
+							)
+
+										);
+						}
+					}
+
+				          ]]>
+
+            </Code>
+        </Task>
+    </UsingTask>
+    
+	<!-- TARGET: Apply Versioning -->
+	<!-- Searches and replaces regex instances of version format -->	
+    <Target Name="ApplyVersioning"> 
+        
+		<Message Text="C-SHARP.NET - Defining C# version $(BuildVer) definitions:" />         		
+		<ItemGroup Condition="'@(AssemblyInfoCSFiles)'!=''">
+			<RegexTransform Include="@(AssemblyInfoCSFiles)">
+				<Find>(?&lt;major&gt;\d+)\.(?&lt;minor&gt;\d+)\.\d+\.(?&lt;revision&gt;\d+)</Find>
+				<ReplaceWith>$(BuildVer)</ReplaceWith>
+			</RegexTransform>
+		</ItemGroup>
+         
+        <Message Text="C-SHARP.NET - Applying Version $(BuildVer) to AssemblyInfo.cs files:" /> 
+        <RegexTransform Items="@(RegexTransform)" Condition="'@(AssemblyInfoCSFiles)'!=''"/>
+        <Message Text="Finished!"/>
+
+		<Message Text="VB.NET - Defining VB version $(BuildVer) definitions:" /> 
+		<ItemGroup Condition="'@(AssemblyInfoVBFiles)'!=''">
+		  <RegexTransform Include="@(AssemblyInfoVBFiles)">
+			<Find>(?&lt;major&gt;\d+)\.(?&lt;minor&gt;\d+)\.\d+\.(?&lt;revision&gt;\d+)</Find>
+			<ReplaceWith>$(BuildVer)</ReplaceWith>
+		  </RegexTransform>
+		 </ItemGroup>
+         
+        <Message Text="VB.NET - Applying Version $(BuildVer) to AssemblyInfo.VB files:" /> 
+		<RegexTransform Items="@(RegexTransform)" Condition="'@(AssemblyInfoVBFiles)'!=''"/>
+        <Message Text="Finished!"/>
+		
+		<!-- Generate Build.Properties file for Build Pipeline -->
+		<Message Text="Creating Build.properties files with Version AND Product information"/>
+		<WriteLinesToFile File="$(WORKSPACE)\Build\WorkSpace\package.contents\Build.properties" Lines="PRODUCT=$(JOB_NAME);VERSION=$(BuildVer);SVNREVISION=$(SVN_REVISION)" Overwrite="true" />
+
+		<!-- Generate Build.Properties file for Build Pipeline -->
+		<MakeDir Directories="$(HUDSON_HOME)\archives" Condition="!Exists('$(HUDSON_HOME)\archives')"/>
+		<Message Text="Creating Build.properties files with Version AND Product information"/>
+		<WriteLinesToFile File="$(WORKSPACE)\Build\WorkSpace\package.contents\Build.$(JOB_NAME).properties" Lines="PRODUCT=$(JOB_NAME);ARTIFACT=$(ProjectName)-$(BuildVer).zip;VERSION=$(BuildVer);SVNREVISION=$(SVN_REVISION)" Overwrite="true" />
+		<WriteLinesToFile File="$(HUDSON_HOME)\archives\Build.$(JOB_NAME).properties.$(BUILD_NUMBER)" Lines="PRODUCT=$(JOB_NAME);ARTIFACT=$(ProjectName)-$(BuildVer).zip;VERSION=$(BuildVer);SVNREVISION=$(SVN_REVISION)" Overwrite="true" />
+		
+		<Message Text="Finished!"/>
+		
+    </Target>
+   
+</Project>
+
