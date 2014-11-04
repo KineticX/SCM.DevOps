@@ -1,4 +1,0 @@
-Started by user anonymous
-[workspace] $ /bin/sh -xe /var/folders/8g/bdjtvf0x5zs8bg8p6cz9c6wh0000gp/T/hudson7616956324565870945.sh
-+ echo 'Deploying artifact: http://artifacts.lifesize.com/artifactory/uvc.softmcu.mp.production/uvc.softmcu.mp.production.trunk-1.8.5.1330.tar.gz'
-Deploying artifact: http://artifacts.lifesize.com/artifactory/uvc.softmcu.mp.production/uvc.softmcu.mp.production.trunk-1.8.5.1330.tar.gz
